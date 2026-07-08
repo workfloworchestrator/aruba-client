@@ -1,1 +1,19 @@
 .claude/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# Test / cache
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# MkDocs
+site/
