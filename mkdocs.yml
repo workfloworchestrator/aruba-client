@@ -1,5 +1,5 @@
 site_name: Aruba Client
-site_description: Python client for the Aruba Central MSP API — typed wrappers with MSP token exchange.
+site_description: "Python client for the Aruba Central MSP API: typed wrappers with MSP token exchange."
 site_author: SURF
 site_url: !ENV [READTHEDOCS_CANONICAL_URL, "https://aruba-client.readthedocs.io/en/latest/"]
 
