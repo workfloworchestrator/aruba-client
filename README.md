@@ -2,7 +2,7 @@
 
 Python client for the [Aruba Central](https://developer.arubanetworks.com/aruba-central) network monitoring API.
 
-Uses **MSP token exchange** (RFC 8693) so a single set of MSP credentials can access all tenant workspaces — no per-tenant API keys needed. Returns typed pydantic models with a `CentralResponse` wrapper that keeps both the raw payload and a lazily-parsed model.
+Uses **MSP token exchange** (RFC 8693) so a single set of MSP credentials can access all tenant workspaces; no per-tenant API keys needed. Returns typed pydantic models with a `CentralResponse` wrapper that keeps both the raw payload and a lazily-parsed model.
 
 [![Tests](https://github.com/workfloworchestrator/aruba-client/actions/workflows/tests.yml/badge.svg)](https://github.com/workfloworchestrator/aruba-client/actions/workflows/tests.yml)
 [![Docs](https://readthedocs.org/projects/aruba-client/badge/?version=latest)](https://aruba-client.readthedocs.io/en/latest/)

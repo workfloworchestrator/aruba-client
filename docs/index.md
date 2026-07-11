@@ -4,7 +4,7 @@ Python client for the [Aruba Central](https://developer.arubanetworks.com/aruba-
 
 ## Authentication
 
-The client uses **MSP (Managed Service Provider) token exchange** (RFC 8693) so that a single set of MSP credentials can access all tenant workspaces — no per-tenant API keys needed.
+The client uses **MSP (Managed Service Provider) token exchange** (RFC 8693) so that a single set of MSP credentials can access all tenant workspaces; no per-tenant API keys needed.
 
 The authentication flow:
 
@@ -31,22 +31,22 @@ pip install aruba-client
 | `ARUBA_GREENLAKE_OAUTH_URL` | Yes | HPE GreenLake OAuth2 base URL |
 | `ARUBA_BASE_URL` | No | Central API base URL (default: `https://de3.api.central.arubanetworks.com`) |
 
-## The `CentralResponse` parser — type-safe vs raw
+## The `CentralResponse` parser: type-safe vs raw
 
-Almost every getter returns a `CentralResponse[Raw, Parsed]` — a thin wrapper that
+Almost every getter returns a `CentralResponse[Raw, Parsed]`, a thin wrapper that
 keeps **both** the untouched API payload and a lazily-validated typed model, so you
 choose per call site how much you trust the schema:
 
 ```python
 resp = get_new_central_aps(conn, site=site.id)
 
-aps   = resp.parsed()   # list[AccessPoint] — validated, typed, the normal path
-rows  = resp.raw        # list[dict]        — the untouched API payload, always available
+aps   = resp.parsed()   # list[AccessPoint] - validated, typed, the normal path
+rows  = resp.raw        # list[dict]        - the untouched API payload, always available
 ```
 
 - **`.parsed()`** runs the model's `from_raw` mapper, **memoizes** the result (the
   parser runs at most once), and returns the typed model. If the payload no longer
-  matches the model — a field changed type, a required key vanished — it **raises**.
+  matches the model (a field changed type, a required key vanished), it **raises**.
 - **`.raw`** is the original `list[dict]`/`dict` straight from pycentral. It never
   raises, so it's the escape hatch when the API has drifted ahead of a model.
 
@@ -86,7 +86,7 @@ conn = get_central_client("My Tenant", config=config)
 
 ### Site addresses
 
-The health endpoint (`get_new_central_sites`) has **no postal address** — the address /
+The health endpoint (`get_new_central_sites`) has **no postal address**; the address /
 city / zipcode live on the separate config API. Join them with `enrich_addresses`:
 
 ```python
@@ -99,17 +99,17 @@ registry.enrich_addresses(get_new_central_site_configs(conn).raw)   # fills Site
 ```python
 from aruba_client import devices, clients, switches, gateways
 
-# devices.py — APs and per-AP / fleet-wide detail
+# devices.py: APs and per-AP / fleet-wide detail
 aps = devices.get_access_points(conn, site_id=site.id).parsed()
 detail = devices.get_access_point_detail(conn, aps[0].serial).parsed()
 radios = devices.get_radios(conn, site_id=site.id).parsed()
 wlans = devices.get_wlans(conn, site_id=site.id).parsed()
 inventory = devices.get_device_inventory(conn, site_assigned="UNASSIGNED").parsed()
 
-# clients.py — wired + wireless clients
+# clients.py: wired + wireless clients
 wifi = clients.get_wireless_clients(conn, site_id=site.id).parsed()
 
-# switches.py / gateways.py — typed list, detail, interfaces, VLANs, ports
+# switches.py / gateways.py: typed list, detail, interfaces, VLANs, ports
 sw = switches.get_switches(conn).parsed()
 ifaces = switches.get_switch_interfaces(conn, "SW-SERIAL").parsed()
 ports = gateways.get_gateway_ports(conn, "GW-SERIAL").parsed()
@@ -123,5 +123,5 @@ Models: `DeviceHealth`, `Site`/`SiteRegistry`, `SiteConfig`, `AccessPoint`,
 `Client`, `Switch`, `SwitchDetail`, `SwitchInterface`, `SwitchVlan`, `Gateway`,
 `GatewayPort`.
 
-All models subclass `_ArubaModel` which uses `extra="ignore"` — unknown API fields
+All models subclass `_ArubaModel` which uses `extra="ignore"`: unknown API fields
 are dropped, not rejected, so an API that adds fields never breaks parsing.
