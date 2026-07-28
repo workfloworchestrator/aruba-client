@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "aruba-client"
-version = "0.1.0"
+version = "0.2.0"
 description = "Aruba Central MSP client — typed wrappers around the network-monitoring API"
 readme = "README.md"
 license = { text = "Apache-2.0" }

@@ -66,6 +66,10 @@ class ArubaClientError(Exception):
     pass
 
 
+class ArubaCustomerNotFoundError(ArubaClientError):
+    """A customer name could not be matched to an MSP-managed Aruba tenant."""
+
+
 def _request_with_retry(method: str, url: str, *, context: str, **kwargs: Any) -> httpx.Response:
     """Issue an httpx request with retry on transient failures.
 
@@ -186,7 +190,7 @@ def _resolve_workspace_id(msp_token: str, customer_name: str) -> str:
 
     wid = _workspace_cache.get(key)
     if not wid:
-        raise ArubaClientError(
+        raise ArubaCustomerNotFoundError(
             f"Customer '{customer_name}' not found among MSP-managed tenants. "
             f"Known tenants: {sorted(_workspace_cache.keys())}"
         )

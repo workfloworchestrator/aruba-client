@@ -16,11 +16,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Install uv and set the Python version
+        uses: astral-sh/setup-uv@v8.3.2
         with:
+          version: "0.11.28"
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: uv sync --locked --extra dev
       - name: Run tests
-        run: pytest tests/ -v
+        run: uv run --no-sync pytest tests/ -v
