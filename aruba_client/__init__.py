@@ -13,6 +13,7 @@
 
 from aruba_client.client import (
     ArubaClientError,
+    ArubaCustomerNotFoundError,
     get_central_client,
     get_msp_tenant_names,
     get_new_central_aps,
@@ -45,6 +46,7 @@ from aruba_client.schema import (
 __all__ = [
     "ArubaClientError",
     "ArubaConfig",
+    "ArubaCustomerNotFoundError",
     "CentralResponse",
     "get_central_client",
     "get_msp_tenant_names",

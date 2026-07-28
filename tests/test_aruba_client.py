@@ -20,6 +20,7 @@ import pytest
 
 from aruba_client.client import (
     ArubaClientError,
+    ArubaCustomerNotFoundError,
     _exchange_for_tenant_token,
     _fetch_msp_tenants,
     _get_msp_token,
@@ -85,7 +86,7 @@ class TestGetCentralClient:
         httpx_mock.add_response(url=re.compile(r".*/oauth2/abc123/token"), json=MSP_TOKEN_RESPONSE)
         httpx_mock.add_response(url=re.compile(r".*/msp-tenants"), json=TENANTS_RESPONSE)
 
-        with pytest.raises(ArubaClientError, match="not found among MSP-managed tenants"):
+        with pytest.raises(ArubaCustomerNotFoundError, match="not found among MSP-managed tenants"):
             get_central_client("NonExistent")
 
     def test_missing_msp_settings_raises(self, monkeypatch):
@@ -231,7 +232,7 @@ class TestResolveWorkspaceId:
     def test_not_found_raises(self, httpx_mock):
         httpx_mock.add_response(json=TENANTS_RESPONSE)
 
-        with pytest.raises(ArubaClientError, match="not found among MSP-managed tenants"):
+        with pytest.raises(ArubaCustomerNotFoundError, match="not found among MSP-managed tenants"):
             _resolve_workspace_id("tok", "NonExistent")
 
 
