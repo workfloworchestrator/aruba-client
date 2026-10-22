@@ -24,19 +24,26 @@ The ``customer_name`` is matched against the GreenLake workspace names
 Configuration is read from ``ARUBA_*`` environment variables via
 :class:`~aruba_client.config.ArubaConfig`, or callers can pass an explicit
 ``config`` object to :func:`get_central_client` / :func:`get_msp_tenant_names`.
+
+The GreenLake token/tenant calls go through plain httpx with the retry/backoff
+helper in :mod:`aruba_client._http`; pycentral retries the Central calls itself.
 """
 
 import time
 from collections.abc import Callable, Iterator
 from http import HTTPStatus
-from typing import Any
 
-import httpx
 import structlog
 from pycentral import NewCentralBase
 from pycentral.new_monitoring import MonitoringAPs, MonitoringSites
 from pycentral.new_monitoring.constants import AP_LIMIT, SITE_LIMIT
 
+from aruba_client._http import (
+    _DEFAULT_TOKEN_TTL,
+    _TOKEN_EXPIRY_BUFFER,
+    ArubaClientError,
+    _request_with_retry,
+)
 from aruba_client.config import ArubaConfig
 from aruba_client.schema import AccessPoint, CentralResponse, SiteConfig, SiteRegistry
 
@@ -48,67 +55,10 @@ _msp_token_cache: dict[str, tuple[str, float]] = {}
 _workspace_cache: dict[str, str] = {}  # workspace_name (upper) -> workspace_id (hex)
 _workspace_cache_expiry: float = 0.0
 _WORKSPACE_CACHE_TTL: int = 3600
-_DEFAULT_TOKEN_TTL: int = 7200
-_TOKEN_EXPIRY_BUFFER: int = 300
-
-# Retry settings for the GreenLake token/tenant calls below. pycentral's
-# NewCentralBase.command() already retries Central API calls (incl. 429), but
-# these GreenLake OAuth/workspace calls go through plain httpx, so we mirror the
-# SDK's exponential backoff here. Values match pycentral.base.RETRY_* defaults.
-_RETRY_MAX_ATTEMPTS: int = 3
-_RETRY_INITIAL_BACKOFF: float = 1.0
-_RETRY_BACKOFF_MULTIPLIER: float = 2.0
-_RETRY_MAX_BACKOFF: float = 10.0
-_RETRY_STATUS_CODES: frozenset[int] = frozenset({429, 500, 502, 503, 504})
-
-
-class ArubaClientError(Exception):
-    pass
 
 
 class ArubaCustomerNotFoundError(ArubaClientError):
     """A customer name could not be matched to an MSP-managed Aruba tenant."""
-
-
-def _request_with_retry(method: str, url: str, *, context: str, **kwargs: Any) -> httpx.Response:
-    """Issue an httpx request with retry on transient failures.
-
-    Retries on transport errors (connection/timeout) and retryable status codes
-    (429 + 5xx) with exponential backoff, then returns the final response so the
-    caller can apply its own status-specific error handling. Non-retryable
-    responses (e.g. 401/400) are returned immediately on the first attempt.
-    """
-    backoff = _RETRY_INITIAL_BACKOFF
-    for attempt in range(1, _RETRY_MAX_ATTEMPTS + 1):
-        is_last = attempt == _RETRY_MAX_ATTEMPTS
-        try:
-            with httpx.Client(http2=True) as client:
-                response = client.request(method, url, **kwargs)
-        except httpx.TransportError as exc:
-            if is_last:
-                raise ArubaClientError(f"{context} failed after {attempt} attempts: {exc}") from exc
-            logger.warning(
-                "Retrying after transport error",
-                context=context,
-                attempt=attempt,
-                error=str(exc),
-                backoff=backoff,
-            )
-        else:
-            if is_last or response.status_code not in _RETRY_STATUS_CODES:
-                return response
-            logger.warning(
-                "Retrying after retryable status",
-                context=context,
-                attempt=attempt,
-                status_code=response.status_code,
-                backoff=backoff,
-            )
-        time.sleep(backoff)
-        backoff = min(backoff * _RETRY_BACKOFF_MULTIPLIER, _RETRY_MAX_BACKOFF)
-
-    # Unreachable: the final attempt always returns or raises above.
-    raise ArubaClientError(f"{context}: retries exhausted")
 
 
 def _get_msp_token(client_id: str, client_secret: str, msp_workspace_id: str, oauth_url: str) -> str:
