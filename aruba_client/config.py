@@ -11,8 +11,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Literal
+
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+UxiRegion = Literal["us-production", "eu-production"]
 
 
 class ArubaConfig(BaseSettings):
@@ -25,3 +29,21 @@ class ArubaConfig(BaseSettings):
     MSP_WORKSPACE_ID: SecretStr
     GREENLAKE_OAUTH_URL: str
     BASE_URL: str = "https://de3.api.central.arubanetworks.com"
+
+
+class UxiConfig(BaseSettings):
+    """Configuration for the HPE Aruba UXI client, read from ARUBA_UXI_* environment variables.
+
+    UXI is authorised by its own GreenLake API client (one bound to the "User Experience
+    Insight" service), not by the Aruba Central MSP credentials. ``REGION`` has no default
+    on purpose: a wrong region is answered with a 403 or another region's (empty) data
+    rather than a clear error, whereas a missing variable fails at startup.
+    """
+
+    model_config = SettingsConfigDict(env_prefix="ARUBA_UXI_")
+
+    CLIENT_ID: SecretStr
+    CLIENT_SECRET: SecretStr
+    REGION: UxiRegion
+    OAUTH_TOKEN_URL: str = "https://sso.common.cloud.hpe.com/as/token.oauth2"
+    BASE_URL: str = "https://api.capenetworks.com/networking-uxi/v1alpha1"

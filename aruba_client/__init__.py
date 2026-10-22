@@ -20,7 +20,7 @@ from aruba_client.client import (
     get_new_central_site_configs,
     get_new_central_sites,
 )
-from aruba_client.config import ArubaConfig
+from aruba_client.config import ArubaConfig, UxiConfig
 from aruba_client.schema import (
     AccessPoint,
     AccessPointDetail,
@@ -40,8 +40,15 @@ from aruba_client.schema import (
     SwitchDetail,
     SwitchInterface,
     SwitchVlan,
+    UxiGroup,
+    UxiGroupRegistry,
+    UxiSensor,
+    UxiSensorGroupAssignment,
+    UxiSensorIssue,
+    UxiSensorStatus,
     Wlan,
 )
+from aruba_client.uxi import UxiClient, UxiGroupNotFoundError, get_uxi_client
 
 __all__ = [
     "ArubaClientError",
@@ -53,6 +60,10 @@ __all__ = [
     "get_new_central_aps",
     "get_new_central_site_configs",
     "get_new_central_sites",
+    "get_uxi_client",
+    "UxiClient",
+    "UxiConfig",
+    "UxiGroupNotFoundError",
     "AccessPoint",
     "AccessPointDetail",
     "Client",
@@ -70,5 +81,11 @@ __all__ = [
     "SwitchDetail",
     "SwitchInterface",
     "SwitchVlan",
+    "UxiGroup",
+    "UxiGroupRegistry",
+    "UxiSensor",
+    "UxiSensorGroupAssignment",
+    "UxiSensorIssue",
+    "UxiSensorStatus",
     "Wlan",
 ]
