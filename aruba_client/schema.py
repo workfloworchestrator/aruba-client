@@ -930,3 +930,160 @@ class GatewayPort(_ArubaModel):
             throughput=raw.get("throughput") or {},
             raw=raw,
         )
+
+
+class UxiGroup(_ArubaModel):
+    """One node of the UXI group tree (``/groups``); ``parent_id`` is "" for the root group."""
+
+    id: str = ""
+    name: str = ""
+    parent_id: str = ""
+    path: str = ""
+    raw: dict[str, Any] = {}
+
+    @classmethod
+    def from_raw(cls, raw: dict) -> "UxiGroup":
+        return cls(
+            id=_s(raw, "id"),
+            name=_s(raw, "name"),
+            parent_id=_s(raw.get("parent") or {}, "id"),
+            path=_s(raw, "path"),
+            raw=raw,
+        )
+
+
+class UxiGroupRegistry(BaseModel):
+    """The UXI group tree, for id lookups and subtree membership — see ``UxiGroup``.
+
+    Name lookups live in :func:`aruba_client.uxi.find_group`, because a UXI group name
+    is unique only among siblings and a lookup therefore has to deal with duplicates.
+    """
+
+    groups: list[UxiGroup] = []
+
+    @classmethod
+    def from_raw(cls, rows: list[dict]) -> "UxiGroupRegistry":
+        return cls(groups=UxiGroup.list_from_raw(rows))
+
+    def resolve(self, group_id: str) -> UxiGroup | None:
+        return next((g for g in self.groups if g.id == group_id), None)
+
+    def subtree_ids(self, group: UxiGroup) -> set[str]:
+        """The ids of ``group`` and all its descendants (``path`` is the dotted chain of ancestors)."""
+        prefix = f"{group.path}."
+        return {group.id} | {g.id for g in self.groups if g.path.startswith(prefix)}
+
+
+class UxiSensor(_ArubaModel):
+    """One sensor from the ``/sensors`` list.
+
+    ``group_name``/``group_path`` are a denormalised copy of the group assignment and
+    may be empty; ``/sensor-group-assignments`` is the authoritative mapping.
+    """
+
+    id: str = ""
+    serial: str = ""
+    name: str = ""
+    model: str = ""
+    group_name: str = ""
+    group_path: str = ""
+    wifi_mac: str = ""
+    ethernet_mac: str = ""
+    address_note: str = ""
+    latitude: float | None = None
+    longitude: float | None = None
+    notes: str = ""
+    pcap_mode: str = ""
+    raw: dict[str, Any] = {}
+
+    @classmethod
+    def from_raw(cls, raw: dict) -> "UxiSensor":
+        return cls(
+            id=_s(raw, "id"),
+            serial=_s(raw, "serial"),
+            name=_s(raw, "name"),
+            model=_s(raw, "modelNumber"),
+            group_name=_s(raw, "groupName"),
+            group_path=_s(raw, "groupPath"),
+            wifi_mac=_s(raw, "wifiMacAddress"),
+            ethernet_mac=_s(raw, "ethernetMacAddress"),
+            address_note=_s(raw, "addressNote"),
+            latitude=raw.get("latitude"),
+            longitude=raw.get("longitude"),
+            notes=_s(raw, "notes"),
+            pcap_mode=_s(raw, "pcapMode"),
+            raw=raw,
+        )
+
+
+class UxiSensorGroupAssignment(_ArubaModel):
+    """One sensor-to-group link from ``/sensor-group-assignments``."""
+
+    id: str = ""
+    group_id: str = ""
+    sensor_id: str = ""
+    raw: dict[str, Any] = {}
+
+    @classmethod
+    def from_raw(cls, raw: dict) -> "UxiSensorGroupAssignment":
+        return cls(
+            id=_s(raw, "id"),
+            group_id=_s(raw.get("group") or {}, "id"),
+            sensor_id=_s(raw.get("sensor") or {}, "id"),
+            raw=raw,
+        )
+
+
+class UxiSensorIssue(_ArubaModel):
+    """One issue reported in ``/sensors/{id}/status``.
+
+    ``severity`` is ``ERROR``/``WARNING``/``INFO`` and ``status`` ``CONFIRMED``/``RESOLVED``;
+    ``timestamp`` is when the issue was last confirmed, not first seen. ``context`` stays
+    raw (ids/names of the affected network, service test, group, ...).
+    """
+
+    id: str = ""
+    code: str = ""
+    severity: str = ""
+    status: str = ""
+    timestamp: str = ""
+    incident_id: str = ""
+    context: dict[str, Any] = {}
+    raw: dict[str, Any] = {}
+
+    @classmethod
+    def from_raw(cls, raw: dict) -> "UxiSensorIssue":
+        return cls(
+            id=_s(raw, "id"),
+            code=_s(raw, "code"),
+            severity=_s(raw, "severity"),
+            status=_s(raw, "status"),
+            timestamp=_s(raw, "timestamp"),
+            incident_id=_s(raw, "incidentId"),
+            context=raw.get("context") or {},
+            raw=raw,
+        )
+
+
+class UxiSensorStatus(_ArubaModel):
+    """Live status of one sensor from ``/sensors/{id}/status``.
+
+    ``is_online`` is ``None`` for a sensor that has never reported and only turns
+    ``False`` after 90 minutes of silence, so a sensor that just lost power still reads
+    ``True``; a confirmed ``ERROR`` in ``issues`` is the quicker signal. Muted issues
+    are still listed.
+    """
+
+    is_online: bool | None = None
+    is_testing: bool | None = None
+    issues: list[UxiSensorIssue] = []
+    raw: dict[str, Any] = {}
+
+    @classmethod
+    def from_raw(cls, raw: dict) -> "UxiSensorStatus":
+        return cls(
+            is_online=raw.get("isOnline"),
+            is_testing=raw.get("isTesting"),
+            issues=UxiSensorIssue.list_from_raw(raw.get("issues") or []),
+            raw=raw,
+        )

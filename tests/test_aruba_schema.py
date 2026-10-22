@@ -25,6 +25,12 @@ from aruba_client.schema import (
     SwitchDetail,
     SwitchInterface,
     SwitchVlan,
+    UxiGroup,
+    UxiGroupRegistry,
+    UxiSensor,
+    UxiSensorGroupAssignment,
+    UxiSensorIssue,
+    UxiSensorStatus,
     Wlan,
 )
 
@@ -308,3 +314,90 @@ class TestSwitchAndGatewayModels:
         assert port.mac == "00:11:22:33:44:0a"
         assert port.total_packets == 0
         assert port.usage == {"total": 0, "received": 0, "sent": 0}
+
+
+class TestUxiModels:
+    def test_group_from_raw_handles_root_without_parent(self):
+        root = UxiGroup.from_raw({"id": "g-1", "name": "Example Org", "parent": None, "path": "g0000001"})
+        child = UxiGroup.from_raw(
+            {"id": "g-2", "name": "Example Campus", "parent": {"id": "g-1"}, "path": "g0000001.g0000002"}
+        )
+
+        assert root.parent_id == ""
+        assert child.parent_id == "g-1"
+        assert child.raw["path"] == "g0000001.g0000002"
+
+    def test_group_registry_subtree_uses_path_prefix(self):
+        registry = UxiGroupRegistry.from_raw(
+            [
+                {"id": "g-1", "name": "Example Org", "parent": None, "path": "a"},
+                {"id": "g-2", "name": "Example Campus", "parent": {"id": "g-1"}, "path": "a.b"},
+                {"id": "g-3", "name": "Building A", "parent": {"id": "g-2"}, "path": "a.b.c"},
+                # Shares the "a.b" prefix as a string but is a sibling, not a descendant.
+                {"id": "g-4", "name": "Demo Campus", "parent": {"id": "g-1"}, "path": "a.bb"},
+            ]
+        )
+
+        assert registry.subtree_ids(registry.resolve("g-2")) == {"g-2", "g-3"}
+        assert registry.subtree_ids(registry.resolve("g-1")) == {"g-1", "g-2", "g-3", "g-4"}
+        assert registry.resolve("missing") is None
+
+    def test_sensor_from_raw_promotes_and_keeps_raw(self):
+        raw = {
+            "id": "s-1",
+            "serial": "SENSORSERIAL01",
+            "name": "demo-sensor-01",
+            "groupName": None,
+            "groupPath": None,
+            "modelNumber": "UX-G6EC",
+            "wifiMacAddress": "00:11:22:33:44:51",
+            "ethernetMacAddress": None,
+            "addressNote": "Lobby",
+            "longitude": 4.9,
+            "latitude": 52.3,
+            "notes": None,
+            "pcapMode": "light",
+            "type": "networking-uxi/sensor",
+            "extraFieldFromFutureApi": "ignored-but-kept-in-raw",
+        }
+        sensor = UxiSensor.from_raw(raw)
+
+        assert sensor.serial == "SENSORSERIAL01"
+        assert sensor.model == "UX-G6EC"
+        assert sensor.group_name == ""  # null coerced to ""
+        assert sensor.ethernet_mac == ""
+        assert (sensor.latitude, sensor.longitude) == (52.3, 4.9)
+        assert sensor.pcap_mode == "light"
+        assert sensor.raw["extraFieldFromFutureApi"] == "ignored-but-kept-in-raw"
+
+    def test_assignment_from_raw_flattens_references(self):
+        assignment = UxiSensorGroupAssignment.from_raw({"id": "a-1", "group": {"id": "g-2"}, "sensor": {"id": "s-1"}})
+
+        assert (assignment.group_id, assignment.sensor_id) == ("g-2", "s-1")
+
+    def test_status_from_raw_with_issue(self):
+        raw = {
+            "isOnline": None,
+            "isTesting": False,
+            "issues": [
+                {
+                    "code": "EXTERNAL_SSL_ERROR",
+                    "context": {"customerId": "c-1", "sensorId": "s-1", "networkName": "demo-ssid"},
+                    "id": "i-1",
+                    "severity": "WARNING",
+                    "status": "RESOLVED",
+                    "timestamp": "2026-06-12T18:00:00Z",
+                }
+            ],
+        }
+        status = UxiSensorStatus.from_raw(raw)
+
+        assert status.is_online is None  # never reported is not the same as offline
+        assert status.is_testing is False
+        assert isinstance(status.issues[0], UxiSensorIssue)
+        assert status.issues[0].incident_id == ""  # key absent
+        assert status.issues[0].context["networkName"] == "demo-ssid"
+        assert status.raw["isTesting"] is False
+
+    def test_status_from_raw_without_issues_key(self):
+        assert UxiSensorStatus.from_raw({"isOnline": True}).issues == []
