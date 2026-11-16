@@ -114,7 +114,7 @@ def _request_with_retry(method: str, url: str, *, context: str, **kwargs: Any) -
 def _get_msp_token(client_id: str, client_secret: str, msp_workspace_id: str, oauth_url: str) -> str:
     """Obtain an MSP access token via client_credentials grant.
 
-    Caches the token for 55 minutes (tokens are typically valid for 2 hours).
+    Caches the token until 5 minutes before its ``expires_in`` (GreenLake currently issues 15-minute tokens).
     """
     cache_key = f"{client_id}:{msp_workspace_id}"
     cached = _msp_token_cache.get(cache_key)
@@ -332,14 +332,14 @@ def get_new_central_site_configs(
 ) -> CentralResponse[list[dict], list[SiteConfig]]:
     """Site configuration (incl. address/city) from the new Central config API — see ``SiteConfig``.
 
-    Offset-paginated against ``network-config/v1alpha1/sites`` via the raw
+    Offset-paginated against ``network-config/v1/sites`` via the raw
     ``conn.command`` interface (there is no pycentral monitoring class for it).
     Use ``.parsed()`` for ``list[SiteConfig]`` or ``.raw`` for the untouched
     rows (which ``SiteRegistry.enrich_addresses`` consumes directly).
     """
 
     def fetch(offset: int) -> dict:
-        api_path = f"network-config/v1alpha1/sites?limit={page_size}&offset={offset}"
+        api_path = f"network-config/v1/sites?limit={page_size}&offset={offset}"
         response = conn.command(api_method="GET", api_path=api_path, app_name="new_central")
         if response.get("code") != 200:
             raise ArubaClientError(f"new_central site config API error {response.get('code')}: {response.get('msg')}")
