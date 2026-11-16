@@ -114,7 +114,7 @@ def _request_with_retry(method: str, url: str, *, context: str, **kwargs: Any) -
 def _get_msp_token(client_id: str, client_secret: str, msp_workspace_id: str, oauth_url: str) -> str:
     """Obtain an MSP access token via client_credentials grant.
 
-    Caches the token for 55 minutes (tokens are typically valid for 2 hours).
+    Caches the token until 5 minutes before its ``expires_in`` (GreenLake currently issues 15-minute tokens).
     """
     cache_key = f"{client_id}:{msp_workspace_id}"
     cached = _msp_token_cache.get(cache_key)

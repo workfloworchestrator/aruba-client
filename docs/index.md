@@ -13,7 +13,7 @@ The authentication flow:
 3. Exchange the MSP token for a tenant-scoped access token via RFC 8693 token exchange.
 4. Use the tenant token with `pycentral.NewCentralBase` to call the Aruba Central API.
 
-Both the MSP token and the workspace name-to-ID mapping are cached in memory (55 min and 1 hour TTL respectively).
+Both the MSP token and the workspace name-to-ID mapping are cached in memory (the token until 5 minutes before its `expires_in`, currently 15 minutes; the mapping for 1 hour).
 
 ## Installation
 
@@ -28,7 +28,7 @@ pip install aruba-client
 | `ARUBA_MSP_CLIENT_ID` | Yes | API client ID from the MSP workspace |
 | `ARUBA_MSP_CLIENT_SECRET` | Yes | API client secret from the MSP workspace |
 | `ARUBA_MSP_WORKSPACE_ID` | Yes | MSP workspace ID (hex, no hyphens) |
-| `ARUBA_GREENLAKE_OAUTH_URL` | Yes | HPE GreenLake OAuth2 base URL |
+| `ARUBA_GREENLAKE_OAUTH_URL` | Yes | HPE GreenLake OAuth2 base URL; the workspace id and `/token` are appended (`https://global.api.greenlake.hpe.com/authorization/v2/oauth2`) |
 | `ARUBA_BASE_URL` | No | Central API base URL (default: `https://de3.api.central.arubanetworks.com`) |
 
 ## The `CentralResponse` parser: type-safe vs raw
@@ -79,7 +79,7 @@ config = ArubaConfig(
     MSP_CLIENT_ID="my-client-id",
     MSP_CLIENT_SECRET="my-secret",
     MSP_WORKSPACE_ID="abcdef123456",
-    GREENLAKE_OAUTH_URL="https://sso.common.cloud.hpe.com/as/token.oauth2",
+    GREENLAKE_OAUTH_URL="https://global.api.greenlake.hpe.com/authorization/v2/oauth2",
 )
 conn = get_central_client("My Tenant", config=config)
 ```
