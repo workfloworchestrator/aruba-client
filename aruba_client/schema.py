@@ -461,7 +461,7 @@ class InventoryDevice(_ArubaModel):
 
 
 class SiteConfig(_ArubaModel):
-    """One site from the config API ``network-config/v1alpha1/sites`` (carries the postal address).
+    """One site from the config API ``network-config/v1/sites`` (carries the postal address).
 
     This is the address/geo view of a site (no health), joined to a monitoring
     :class:`Site` by ``id`` via :meth:`SiteRegistry.enrich_addresses`. The config

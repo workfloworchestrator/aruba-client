@@ -85,7 +85,7 @@ class TestAccessPointModel:
 
 class TestSiteConfigModel:
     def test_from_raw_maps_address_fields(self):
-        # Trimmed representative shape from network-config/v1alpha1/sites (note: no site "name").
+        # Trimmed representative shape from network-config/v1/sites (note: no site "name").
         raw = {
             "id": "s1",
             "address": "Voorbeeldstraat 1",

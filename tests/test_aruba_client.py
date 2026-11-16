@@ -418,4 +418,4 @@ class TestGetNewCentralSiteConfigs:
         assert parsed[0].address == "Voorbeeldstraat 1"
         assert parsed[0].city == "Amsterdam"
         _, kwargs = conn.command.call_args
-        assert kwargs["api_path"] == "network-config/v1alpha1/sites?limit=100&offset=0"
+        assert kwargs["api_path"] == "network-config/v1/sites?limit=100&offset=0"
