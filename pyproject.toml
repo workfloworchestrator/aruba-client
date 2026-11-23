@@ -38,6 +38,12 @@ Homepage = "https://github.com/workfloworchestrator/aruba-client"
 Documentation = "https://aruba-client.readthedocs.io"
 Repository = "https://github.com/workfloworchestrator/aruba-client"
 
+[tool.uv]
+# Same three-day release age as Renovate's `minimumReleaseAge` in the shared config, so a
+# lock regeneration never picks a release that Renovate would still consider too new.
+# Vulnerability fixes younger than three days need the exempt-rebuild procedure.
+exclude-newer = "3 days"
+
 [tool.hatch.build.targets.wheel]
 packages = ["aruba_client"]
 

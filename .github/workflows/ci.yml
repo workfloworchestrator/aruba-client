@@ -1,0 +1,45 @@
+# Single PR/push entry point for CI. For PRs the final 'CI result' job must pass in order to
+# merge; it is the only check Renovate (and the branch ruleset) needs to watch. See
+# https://github.com/workfloworchestrator/renovate-config for the shared configuration.
+#
+# The called jobs report as "<caller job name> / <called job name>", e.g.
+# "Tests / Run tests" and "Docs build / Build mkdocs site", so the caller names follow the
+# called workflows. Defaults to `secrets: inherit`, which means a nested job cannot add secrets
+# of its own.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A new push cancels the previous run on the same branch and PR, so only one set of checks is live.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests
+    uses: ./.github/workflows/tests.yml
+
+  docs:
+    name: Docs build
+    uses: ./.github/workflows/docs-build.yml
+
+  result:
+    name: CI result
+    needs:
+      - test
+      - docs
+    runs-on: ubuntu-slim
+    if: always() # also report when a needed job failed or was cancelled
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
+        with:
+          jobs: ${{ toJSON(needs) }}

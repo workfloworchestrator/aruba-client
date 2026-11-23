@@ -1,22 +1,13 @@
+# Called by ci.yml only: the triggers live there, so one PR run produces one set of checks.
+#
+# No `paths:` filter here on purpose. A repository-level path filter would leave this job
+# out of a PR that only touches pyproject.toml/uv.lock (a Renovate PR, for instance), and a
+# check that is required by the ruleset then never reports, which blocks the PR forever.
+# The strict build takes about a minute, so it runs on every PR instead.
 name: Docs build
 
 on:
-  push:
-    paths:
-      - docs/**
-      - mkdocs.yml
-      - requirements/docs.txt
-      - .readthedocs.yaml
-      - README.md
-      - .github/workflows/docs-build.yml
-  pull_request:
-    paths:
-      - docs/**
-      - mkdocs.yml
-      - requirements/docs.txt
-      - .readthedocs.yaml
-      - README.md
-      - .github/workflows/docs-build.yml
+  workflow_call:
 
 jobs:
   build:

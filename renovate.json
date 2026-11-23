@@ -1,0 +1,26 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "local>workfloworchestrator/renovate-config",
+    "local>workfloworchestrator/renovate-config//languages/python",
+    "local>workfloworchestrator/renovate-config//projects/library",
+    "local>workfloworchestrator/renovate-config//extras/security-alerts"
+  ],
+  "pip_requirements": {
+    "description": "[disable] Renovate's default pip-requirements pattern does not match requirements/docs.txt; manage that file explicitly so Read the Docs installs it and the PRs stay manual",
+    "managerFilePatterns": ["/^requirements/docs\\.txt$/"]
+  },
+  "packageRules": [
+    {
+      "description": "[automerge] Runtime dependencies and the published dev extra need a review, including the exact pycentral pin",
+      "matchManagers": ["pep621"],
+      "matchDepTypes": ["dependencies", "optional-dependencies"],
+      "automerge": false
+    },
+    {
+      "description": "[automerge] requirements/docs.txt feeds the Read the Docs build, so its bumps need a review too",
+      "matchManagers": ["pip_requirements"],
+      "automerge": false
+    }
+  ]
+}
