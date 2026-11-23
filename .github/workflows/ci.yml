@@ -17,10 +17,11 @@ on:
 permissions:
   contents: read
 
-# A new push cancels the previous run on the same branch and PR, so only one set of checks is live.
+# A new push on the same PR cancels the previous run, so only one set of PR checks is live.
+# Main pushes are not cancelled: each commit on main should keep its own full result.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:

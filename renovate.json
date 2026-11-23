@@ -7,14 +7,21 @@
     "local>workfloworchestrator/renovate-config//extras/security-alerts"
   ],
   "pip_requirements": {
-    "description": "[disable] Renovate's default pip-requirements pattern does not match requirements/docs.txt; manage that file explicitly so Read the Docs installs it and the PRs stay manual",
+    "description": "[enable] Renovate's default pip-requirements pattern misses requirements/docs.txt; add that path so Read the Docs requirements are managed",
     "managerFilePatterns": ["/^requirements/docs\\.txt$/"]
   },
   "packageRules": [
     {
-      "description": "[automerge] Runtime dependencies and the published dev extra need a review, including the exact pycentral pin",
+      "description": "[automerge] Runtime dependencies and the published dev extra need a review, including the exact pycentral pin. pep621 reports project.dependencies and project.optional-dependencies, not the short names",
       "matchManagers": ["pep621"],
-      "matchDepTypes": ["dependencies", "optional-dependencies"],
+      "matchDepTypes": ["project.dependencies", "project.optional-dependencies"],
+      "automerge": false
+    },
+    {
+      "description": "[automerge,group] Hosted runner image majors (ubuntu-24.04 -> 26.04) change the build environment and are only exercised by the release workflow, so group and review them",
+      "matchManagers": ["github-actions"],
+      "matchDepTypes": ["github-runner"],
+      "groupName": "GitHub runner images",
       "automerge": false
     },
     {
