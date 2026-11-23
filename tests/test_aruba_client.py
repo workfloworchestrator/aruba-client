@@ -352,49 +352,51 @@ class TestGetNewCentralSites:
 
 
 class TestGetNewCentralAps:
-    """``get_new_central_aps`` delegates to ``MonitoringAPs`` (cursor pagination + site filter)."""
+    """``get_new_central_aps`` lists APs from ``network-monitoring/v1/devices``, not the lossy ``/aps``."""
 
-    def test_fetches_all_pages_via_sdk(self, monkeypatch):
-        mock = Mock(return_value=[{"serialNumber": "SN1"}, {"serialNumber": "SN2"}])
-        monkeypatch.setattr("aruba_client.client.MonitoringAPs.get_all_aps", mock)
+    def test_follows_next_cursor_over_all_pages(self, monkeypatch):
+        mock = Mock(
+            side_effect=[
+                {"items": [{"serialNumber": "SN1"}], "total": 2, "next": 2},
+                {"items": [{"serialNumber": "SN2"}], "total": 2, "next": None},
+            ]
+        )
+        monkeypatch.setattr("aruba_client.devices.MonitoringDevices.get_devices", mock)
 
         result = get_new_central_aps(Mock())
 
         assert result.raw == [{"serialNumber": "SN1"}, {"serialNumber": "SN2"}]
-        _, kwargs = mock.call_args
-        assert kwargs["filter_str"] is None
+        assert [c.kwargs["next"] for c in mock.call_args_list] == [1, 2]
+        assert {c.kwargs["filter_str"] for c in mock.call_args_list} == {"deviceType eq ACCESS_POINT"}
 
-    def test_site_is_translated_to_filter(self, monkeypatch):
-        mock = Mock(return_value=[])
-        monkeypatch.setattr("aruba_client.client.MonitoringAPs.get_all_aps", mock)
+    def test_site_is_anded_with_access_point_filter(self, monkeypatch):
+        mock = Mock(return_value={"items": [], "total": 0})
+        monkeypatch.setattr("aruba_client.devices.MonitoringDevices.get_devices", mock)
 
         get_new_central_aps(Mock(), site="site-001")
 
-        _, kwargs = mock.call_args
-        assert kwargs["filter_str"] == "siteId eq site-001"
+        assert mock.call_args.kwargs["filter_str"] == "deviceType eq ACCESS_POINT and siteId eq site-001"
 
-    def test_only_first_page_uses_single_page_endpoint(self, monkeypatch):
-        page_mock = Mock(return_value={"items": [{"serialNumber": "SN1"}], "total": 9})
-        all_mock = Mock()
-        monkeypatch.setattr("aruba_client.client.MonitoringAPs.get_aps", page_mock)
-        monkeypatch.setattr("aruba_client.client.MonitoringAPs.get_all_aps", all_mock)
+    def test_only_first_page_fetches_one_page(self, monkeypatch):
+        mock = Mock(return_value={"items": [{"serialNumber": "SN1"}], "total": 9, "next": 2})
+        monkeypatch.setattr("aruba_client.devices.MonitoringDevices.get_devices", mock)
 
         result = get_new_central_aps(Mock(), page_size=50, only_first_page=True, site="site-001")
 
         assert result.raw == [{"serialNumber": "SN1"}]
-        all_mock.assert_not_called()
-        _, kwargs = page_mock.call_args
-        assert kwargs["filter_str"] == "siteId eq site-001"
-        assert kwargs["limit"] == 50
+        assert mock.call_count == 1
+        assert mock.call_args.kwargs["filter_str"] == "deviceType eq ACCESS_POINT and siteId eq site-001"
+        assert mock.call_args.kwargs["limit"] == 50
 
     def test_parsed_returns_access_points(self, monkeypatch):
-        mock = Mock(return_value=[{"serialNumber": "SN1", "deviceName": "ap1", "siteId": "s1"}])
-        monkeypatch.setattr("aruba_client.client.MonitoringAPs.get_all_aps", mock)
+        row = {"serialNumber": "SN1", "deviceName": "ap1", "siteId": "s1", "deviceType": "ACCESS_POINT"}
+        monkeypatch.setattr(
+            "aruba_client.devices.MonitoringDevices.get_devices", Mock(return_value={"items": [row], "total": 1})
+        )
 
         aps = get_new_central_aps(Mock()).parsed()
 
-        assert [isinstance(ap, AccessPoint) for ap in aps] == [True]
-        assert aps[0].serial == "SN1"
+        assert [(type(ap), ap.serial, ap.name, ap.site_id) for ap in aps] == [(AccessPoint, "SN1", "ap1", "s1")]
 
 
 class TestGetNewCentralSiteConfigs:

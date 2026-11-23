@@ -41,36 +41,51 @@ AP_DETAIL_RAW = {
 
 
 class TestGetAccessPoints:
-    def test_no_filter(self, monkeypatch):
-        mock = Mock(return_value=[{"serialNumber": "SN1"}])
-        monkeypatch.setattr(f"{DEVICES_MODULE}.MonitoringAPs.get_all_aps", mock)
+    """APs are listed from ``network-monitoring/v1/devices``: ``/aps`` leaves some out."""
+
+    @staticmethod
+    def _patch_devices(monkeypatch, *pages):
+        mock = Mock(side_effect=list(pages) or None, return_value={"items": [], "total": 0})
+        monkeypatch.setattr(f"{DEVICES_MODULE}.MonitoringDevices.get_devices", mock)
+        return mock
+
+    def test_no_filter_still_narrows_to_access_points(self, monkeypatch):
+        mock = self._patch_devices(monkeypatch, {"items": [{"serialNumber": "SN1"}], "total": 1})
 
         result = devices.get_access_points(Mock())
 
         assert result.raw == [{"serialNumber": "SN1"}]
-        parsed = result.parsed()
-        assert isinstance(parsed[0], AccessPoint)
-        assert parsed[0].serial == "SN1"
-        _, kwargs = mock.call_args
-        assert kwargs["filter_str"] is None
+        assert [(type(ap), ap.serial) for ap in result.parsed()] == [(AccessPoint, "SN1")]
+        assert mock.call_args.kwargs["filter_str"] == "deviceType eq ACCESS_POINT"
 
     def test_site_id_becomes_filter(self, monkeypatch):
-        mock = Mock(return_value=[])
-        monkeypatch.setattr(f"{DEVICES_MODULE}.MonitoringAPs.get_all_aps", mock)
+        mock = self._patch_devices(monkeypatch)
 
         devices.get_access_points(Mock(), site_id="site-001")
 
-        _, kwargs = mock.call_args
-        assert kwargs["filter_str"] == "siteId eq site-001"
+        assert mock.call_args.kwargs["filter_str"] == "deviceType eq ACCESS_POINT and siteId eq site-001"
 
     def test_site_id_is_anded_with_user_filter(self, monkeypatch):
-        mock = Mock(return_value=[])
-        monkeypatch.setattr(f"{DEVICES_MODULE}.MonitoringAPs.get_all_aps", mock)
+        mock = self._patch_devices(monkeypatch)
 
         devices.get_access_points(Mock(), site_id="site-001", filter_str="status eq ONLINE")
 
-        _, kwargs = mock.call_args
-        assert kwargs["filter_str"] == "status eq ONLINE and siteId eq site-001"
+        assert (
+            mock.call_args.kwargs["filter_str"]
+            == "deviceType eq ACCESS_POINT and status eq ONLINE and siteId eq site-001"
+        )
+
+    def test_sort_is_passed_to_every_page(self, monkeypatch):
+        mock = self._patch_devices(
+            monkeypatch,
+            {"items": [{"serialNumber": "SN1"}], "total": 2, "next": 2},
+            {"items": [{"serialNumber": "SN2"}], "total": 2, "next": None},
+        )
+
+        result = devices.get_access_points(Mock(), sort="deviceName asc")
+
+        assert [ap.serial for ap in result.parsed()] == ["SN1", "SN2"]
+        assert [c.kwargs["sort"] for c in mock.call_args_list] == ["deviceName asc", "deviceName asc"]
 
 
 class TestGetAccessPointDetail:

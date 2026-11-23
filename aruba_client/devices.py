@@ -27,6 +27,8 @@ from typing import Any
 import structlog
 from pycentral import NewCentralBase
 from pycentral.new_monitoring import WLAN, MonitoringAPs, MonitoringDevices
+from pycentral.new_monitoring.constants import DEVICE_LIMIT
+from pycentral.utils.monitoring_utils import get_all_pages
 
 from aruba_client.schema import (
     AccessPoint,
@@ -54,6 +56,40 @@ def _combine_filters(*filters: str | None) -> str | None:
     return " and ".join(parts) if parts else None
 
 
+ACCESS_POINT_FILTER = "deviceType eq ACCESS_POINT"
+
+
+def fetch_access_point_rows(
+    conn: NewCentralBase,
+    *,
+    filter_str: str | None = None,
+    sort: str | None = None,
+    page_size: int = DEVICE_LIMIT,
+    only_first_page: bool = False,
+) -> list[dict]:
+    """Raw AP rows from ``network-monitoring/v1/devices``, narrowed to ``deviceType eq ACCESS_POINT``.
+
+    Not ``network-monitoring/v1/aps``: that list silently leaves out a share of the APs (about 7%
+    across the SURF tenants in November 2026). Those APs are online, assigned to a site and
+    answer on ``aps/{serial}``, and nothing in their data tells them apart. The devices list
+    returns every AP the aps list does, plus the missing ones. Its rows lack the aps-only
+    ``clientCount``, ``wlanCount`` and ``publicIpv4``.
+    """
+    combined = _combine_filters(ACCESS_POINT_FILTER, filter_str)
+    if only_first_page:
+        return _items(MonitoringDevices.get_devices(conn, filter_str=combined, sort=sort, limit=page_size))
+    # pycentral's own get_all_devices drops ``sort`` and pages by a bare counter, so follow the
+    # server's ``next`` cursor instead, as get_all_aps does.
+    return get_all_pages(
+        MonitoringDevices.get_devices,
+        limit=page_size,
+        next_arg_name="next",
+        central_conn=conn,
+        filter_str=combined,
+        sort=sort,
+    )
+
+
 def get_access_points(
     conn: NewCentralBase,
     *,
@@ -61,9 +97,9 @@ def get_access_points(
     filter_str: str | None = None,
     sort: str | None = None,
 ) -> CentralResponse[list[dict], list[AccessPoint]]:
-    """List monitored APs (``network-monitoring/v1/aps``) — see ``AccessPoint``."""
+    """List monitored APs — see ``AccessPoint`` and :func:`fetch_access_point_rows`."""
     combined = _combine_filters(filter_str, f"siteId eq {site_id}" if site_id else None)
-    rows = MonitoringAPs.get_all_aps(conn, filter_str=combined, sort=sort)
+    rows = fetch_access_point_rows(conn, filter_str=combined, sort=sort)
     return CentralResponse(rows, AccessPoint.list_from_raw)
 
 
