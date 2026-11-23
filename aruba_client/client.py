@@ -34,10 +34,11 @@ from typing import Any
 import httpx
 import structlog
 from pycentral import NewCentralBase
-from pycentral.new_monitoring import MonitoringAPs, MonitoringSites
-from pycentral.new_monitoring.constants import AP_LIMIT, SITE_LIMIT
+from pycentral.new_monitoring import MonitoringSites
+from pycentral.new_monitoring.constants import DEVICE_LIMIT, SITE_LIMIT
 
 from aruba_client.config import ArubaConfig
+from aruba_client.devices import fetch_access_point_rows
 from aruba_client.schema import AccessPoint, CentralResponse, SiteConfig, SiteRegistry
 
 logger = structlog.get_logger(__name__)
@@ -361,16 +362,13 @@ def get_new_central_site_configs(
 
 def get_new_central_aps(
     conn: NewCentralBase,
-    page_size: int = AP_LIMIT,
+    page_size: int = DEVICE_LIMIT,
     only_first_page: bool = False,
     site: str | None = None,
 ) -> CentralResponse[list[dict], list[AccessPoint]]:
-    """Access points (``network-monitoring/v1/aps``), optionally scoped to a ``site`` — see ``AccessPoint``."""
+    """Access points, optionally scoped to a ``site`` — see ``AccessPoint`` and ``devices.fetch_access_point_rows``."""
     logger.info("Getting APs from new_central", page_size=page_size, only_first_page=only_first_page, site=site)
 
     filter_str = f"siteId eq {site}" if site else None
-    if only_first_page:
-        rows = MonitoringAPs.get_aps(conn, filter_str=filter_str, limit=page_size).get("items", [])
-    else:
-        rows = MonitoringAPs.get_all_aps(conn, filter_str=filter_str)
+    rows = fetch_access_point_rows(conn, filter_str=filter_str, page_size=page_size, only_first_page=only_first_page)
     return CentralResponse(rows, AccessPoint.list_from_raw)

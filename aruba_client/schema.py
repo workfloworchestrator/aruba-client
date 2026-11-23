@@ -154,7 +154,11 @@ class SiteRegistry(BaseModel):
 
 
 class AccessPoint(_ArubaModel):
-    """One access point from the ``network-monitoring/v1/aps`` list."""
+    """One access point, listed from ``network-monitoring/v1/devices`` (see ``devices.fetch_access_point_rows``).
+
+    ``client_count``, ``wlan_count`` and ``public_ipv4`` only exist on the ``network-monitoring/v1/aps``
+    list, which drops some APs, so on a listed AP they are ``None``/empty.
+    """
 
     serial: str = ""
     name: str = ""
