@@ -1,10 +1,8 @@
+# Called by ci.yml only: the triggers live there, so one PR run produces one set of checks.
 name: Tests
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_call:
 
 jobs:
   test:

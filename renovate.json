@@ -1,0 +1,42 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "local>workfloworchestrator/renovate-config",
+    "local>workfloworchestrator/renovate-config//languages/python",
+    "local>workfloworchestrator/renovate-config//projects/library",
+    "local>workfloworchestrator/renovate-config//extras/security-alerts"
+  ],
+  "packageRules": [
+    {
+      "description": "[automerge] Runtime dependencies and the published dev extra need a review, including the exact pycentral pin. pep621 reports project.dependencies and project.optional-dependencies, not the short names",
+      "matchManagers": ["pep621"],
+      "matchDepTypes": ["project.dependencies", "project.optional-dependencies"],
+      "automerge": false
+    },
+    {
+      "description": "[automerge] The docs dependency group feeds the Read the Docs build, so its bumps need a review like the requirements file they replaced; overrides the shared automerge for dependency-groups. The schedule from the shared preset still applies",
+      "matchManagers": ["pep621"],
+      "matchDepTypes": ["dependency-groups"],
+      "matchPackageNames": [
+        "mkdocs",
+        "mkdocs-material",
+        "pymdown-extensions",
+        "mkdocs-include-markdown-plugin",
+        "mkdocs-git-revision-date-localized-plugin"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "[automerge] Lock file maintenance re-resolves every dependency, docs ones included, and the Read the Docs build uses uv.lock, so keep those updates for review like the requirements bumps they replaced. Overrides the library preset's automerge but not its schedule",
+      "matchUpdateTypes": ["lockFileMaintenance"],
+      "automerge": false
+    },
+    {
+      "description": "[automerge,group] Hosted runner image majors (ubuntu-24.04 -> 26.04) change the build environment and are only exercised by the release workflow, so group and review them",
+      "matchManagers": ["github-actions"],
+      "matchDepTypes": ["github-runner"],
+      "groupName": "GitHub runner images",
+      "automerge": false
+    }
+  ]
+}

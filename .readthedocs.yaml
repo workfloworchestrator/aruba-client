@@ -18,6 +18,14 @@ build:
 mkdocs:
   configuration: mkdocs.yml
 
+# Documentation dependencies are the `docs` dependency group in pyproject.toml, resolved
+# from the committed uv.lock. Read the Docs installs uv through this native option
+# (`method: uv`); it runs `uv sync --group docs`, which honours uv.lock when it is up to
+# date and otherwise re-resolves. CI runs the same group with `--locked`, so a stale lock
+# fails there first.
 python:
   install:
-    - requirements: requirements/docs.txt
+    - method: uv
+      command: sync
+      groups:
+        - docs

@@ -33,10 +33,26 @@ dev = [
     "python-dotenv>=1.1.1",
 ]
 
+[dependency-groups]
+# MkDocs-based documentation stack. Development-only: never published as runtime deps.
+docs = [
+    "mkdocs~=1.6",
+    "mkdocs-material~=9.5",
+    "pymdown-extensions~=10.9",
+    "mkdocs-include-markdown-plugin~=7.0",
+    "mkdocs-git-revision-date-localized-plugin~=1.2",
+]
+
 [project.urls]
 Homepage = "https://github.com/workfloworchestrator/aruba-client"
 Documentation = "https://aruba-client.readthedocs.io"
 Repository = "https://github.com/workfloworchestrator/aruba-client"
+
+[tool.uv]
+# Same three-day release age as Renovate's `minimumReleaseAge` in the shared config, so a
+# lock regeneration never picks a release that Renovate would still consider too new.
+# Vulnerability fixes younger than three days need the exempt-rebuild procedure.
+exclude-newer = "3 days"
 
 [tool.hatch.build.targets.wheel]
 packages = ["aruba_client"]
