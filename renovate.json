@@ -6,10 +6,6 @@
     "local>workfloworchestrator/renovate-config//projects/library",
     "local>workfloworchestrator/renovate-config//extras/security-alerts"
   ],
-  "pip_requirements": {
-    "description": "[enable] Renovate's default pip-requirements pattern misses requirements/docs.txt; add that path so Read the Docs requirements are managed",
-    "managerFilePatterns": ["/^requirements/docs\\.txt$/"]
-  },
   "packageRules": [
     {
       "description": "[automerge] Runtime dependencies and the published dev extra need a review, including the exact pycentral pin. pep621 reports project.dependencies and project.optional-dependencies, not the short names",
@@ -18,15 +14,28 @@
       "automerge": false
     },
     {
+      "description": "[automerge] The docs dependency group feeds the Read the Docs build, so its bumps need a review like the requirements file they replaced; overrides the shared automerge for dependency-groups. The schedule from the shared preset still applies",
+      "matchManagers": ["pep621"],
+      "matchDepTypes": ["dependency-groups"],
+      "matchPackageNames": [
+        "mkdocs",
+        "mkdocs-material",
+        "pymdown-extensions",
+        "mkdocs-include-markdown-plugin",
+        "mkdocs-git-revision-date-localized-plugin"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "[automerge] Lock file maintenance re-resolves every dependency, docs ones included, and the Read the Docs build uses uv.lock, so keep those updates for review like the requirements bumps they replaced. Overrides the library preset's automerge but not its schedule",
+      "matchUpdateTypes": ["lockFileMaintenance"],
+      "automerge": false
+    },
+    {
       "description": "[automerge,group] Hosted runner image majors (ubuntu-24.04 -> 26.04) change the build environment and are only exercised by the release workflow, so group and review them",
       "matchManagers": ["github-actions"],
       "matchDepTypes": ["github-runner"],
       "groupName": "GitHub runner images",
-      "automerge": false
-    },
-    {
-      "description": "[automerge] requirements/docs.txt feeds the Read the Docs build, so its bumps need a review too",
-      "matchManagers": ["pip_requirements"],
       "automerge": false
     }
   ]

@@ -33,6 +33,16 @@ dev = [
     "python-dotenv>=1.1.1",
 ]
 
+[dependency-groups]
+# MkDocs-based documentation stack. Development-only: never published as runtime deps.
+docs = [
+    "mkdocs~=1.6",
+    "mkdocs-material~=9.5",
+    "pymdown-extensions~=10.9",
+    "mkdocs-include-markdown-plugin~=7.0",
+    "mkdocs-git-revision-date-localized-plugin~=1.2",
+]
+
 [project.urls]
 Homepage = "https://github.com/workfloworchestrator/aruba-client"
 Documentation = "https://aruba-client.readthedocs.io"
